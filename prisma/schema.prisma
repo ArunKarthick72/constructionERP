@@ -1,0 +1,224 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth ───────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("ADMIN") // ADMIN | SUPERVISOR | ACCOUNTANT
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Supplier & Material Master ──────────────────────────────────────────────
+
+model Supplier {
+  id           String     @id @default(cuid())
+  name         String
+  contactName  String?
+  phone        String?
+  email        String?
+  address      String?
+  gstin        String?
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  materials    SupplierMaterial[]
+  purchases    Purchase[]
+}
+
+model MaterialCategory {
+  id        String     @id @default(cuid())
+  name      String     @unique  // e.g., "Structural & Core Materials"
+  nameTA    String?              // Tamil name
+  sortOrder Int        @default(0)
+  materials Material[]
+}
+
+model Material {
+  id          String           @id @default(cuid())
+  name        String
+  nameTA      String?
+  unit        String           @default("Nos") // kg, bags, sqft, rft, nos, litre
+  categoryId  String
+  category    MaterialCategory @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  suppliers      SupplierMaterial[]
+  purchases      Purchase[]
+  usages         MaterialUsage[]
+  smallWorkItems SmallWorkMaterial[]
+  stockLedger    StockLedger[]
+}
+
+model SupplierMaterial {
+  id          String   @id @default(cuid())
+  supplierId  String
+  materialId  String
+  supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  material    Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  @@unique([supplierId, materialId])
+}
+
+// ─── Project & Owner Details ─────────────────────────────────────────────────
+
+model Project {
+  id           String    @id @default(cuid())
+  projectCode  String    @unique   // Auto-generated e.g. DA-2024-001
+  ownerName    String
+  ownerPhone   String?
+  siteLocation String
+  startDate    DateTime
+  endDate      DateTime?
+  status       String    @default("ACTIVE") // ACTIVE | COMPLETED | ON_HOLD
+  totalBudget  Float?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  financials    FinancialEntry[]
+  purchases     Purchase[]
+  materialUsages MaterialUsage[]
+  salaryEntries  SalaryEntry[]
+}
+
+// ─── Financial Tracking ───────────────────────────────────────────────────────
+
+model FinancialEntry {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  entryType   String   // ADVANCE | RECEIPT | EXPENSE | REFUND
+  amount      Float
+  description String?
+  entryDate   DateTime
+  referenceNo String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── Material Purchase & Usage ────────────────────────────────────────────────
+
+model Purchase {
+  id           String    @id @default(cuid())
+  projectId    String?
+  project      Project?  @relation(fields: [projectId], references: [id])
+  supplierId   String
+  supplier     Supplier  @relation(fields: [supplierId], references: [id])
+  materialId   String
+  material     Material  @relation(fields: [materialId], references: [id])
+  quantity     Float
+  unit         String
+  unitPrice    Float
+  totalCost    Float
+  purchaseDate DateTime
+  invoiceNo    String?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  stockLedger  StockLedger[]
+}
+
+model MaterialUsage {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  materialId  String
+  material    Material @relation(fields: [materialId], references: [id])
+  quantity    Float
+  unit        String
+  usageDate   DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  stockLedger StockLedger[]
+}
+
+// ─── Warehouse & Stock ────────────────────────────────────────────────────────
+
+model StockLedger {
+  id           String         @id @default(cuid())
+  materialId   String
+  material     Material       @relation(fields: [materialId], references: [id])
+  txnType      String         // IN | OUT
+  quantity     Float
+  balanceAfter Float
+  referenceType String?       // PURCHASE | USAGE | SMALL_WORK
+  purchaseId   String?
+  purchase     Purchase?      @relation(fields: [purchaseId], references: [id])
+  usageId      String?
+  usage        MaterialUsage? @relation(fields: [usageId], references: [id])
+  smallWorkId  String?
+  smallWork    SmallWorkMaterial? @relation(fields: [smallWorkId], references: [id])
+  txnDate      DateTime
+  createdAt    DateTime       @default(now())
+}
+
+// ─── Employee & Salary Management ─────────────────────────────────────────────
+
+model Employee {
+  id           String        @id @default(cuid())
+  name         String
+  phone        String?
+  role         String        // MAESTRI | KOTHANAR | CHITTHAL | ENGINEER | OTHER
+  dailyWage    Float?
+  monthlyWage  Float?
+  joinDate     DateTime?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  salaryEntries SalaryEntry[]
+}
+
+model SalaryEntry {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id])
+  payType     String   // DAILY | WEEKLY | MONTHLY | ADVANCE
+  amount      Float
+  daysWorked  Float?
+  periodFrom  DateTime
+  periodTo    DateTime
+  paidDate    DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── Small Construction Works ─────────────────────────────────────────────────
+
+model SmallWork {
+  id          String              @id @default(cuid())
+  title       String
+  location    String?
+  description String?
+  workDate    DateTime
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  materials   SmallWorkMaterial[]
+}
+
+model SmallWorkMaterial {
+  id         String       @id @default(cuid())
+  smallWorkId String
+  smallWork  SmallWork    @relation(fields: [smallWorkId], references: [id], onDelete: Cascade)
+  materialId String
+  material   Material     @relation(fields: [materialId], references: [id])
+  quantity   Float
+  unit       String
+  createdAt  DateTime     @default(now())
+  stockLedger StockLedger[]
+}
