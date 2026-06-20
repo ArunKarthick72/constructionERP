@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma db push --accept-data-loss && npm run db:seed && cp prisma/dev.db public/dev.db && next build",
+    "build": "prisma db push --accept-data-loss && npm run db:seed && node -e \"const fs = require('fs'); if (fs.existsSync('prisma/dev.db')) { fs.copyFileSync('prisma/dev.db', 'public/dev.db'); }\" && next build",
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
