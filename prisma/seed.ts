@@ -15,6 +15,24 @@ async function main() {
   })
   console.log('✅ Admin user ready')
 
+  // ─── Site Supervisor User ──────────────────────────────────────────────────
+  const supervisorPassword = await bcrypt.hash('super123', 12)
+  await prisma.user.upsert({
+    where: { email: 'supervisor@deivenei.com' },
+    update: {},
+    create: { name: 'Supervisor User', email: 'supervisor@deivenei.com', password: supervisorPassword, role: 'SUPERVISOR' },
+  })
+  console.log('✅ Supervisor user ready')
+
+  // ─── Accountant User ───────────────────────────────────────────────────────
+  const accountantPassword = await bcrypt.hash('account123', 12)
+  await prisma.user.upsert({
+    where: { email: 'accountant@deivenei.com' },
+    update: {},
+    create: { name: 'Accountant User', email: 'accountant@deivenei.com', password: accountantPassword, role: 'ACCOUNTANT' },
+  })
+  console.log('✅ Accountant user ready')
+
   // ─── Material Categories ──────────────────────────────────────────────────
   const [structural, finishing, woodMetal, plumbing] = await Promise.all([
     prisma.materialCategory.upsert({ where: { name: 'Structural & Core Materials' }, update: {}, create: { name: 'Structural & Core Materials', nameTA: 'கட்டமைப்பு & மையப் பொருட்கள்', sortOrder: 1 } }),

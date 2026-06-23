@@ -9,6 +9,7 @@ import {
   Wrench, BarChart3, ChevronLeft, ChevronRight, Settings,
   HardHat
 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 
 const NAV_ITEMS = [
@@ -91,9 +92,23 @@ const NAV_ITEMS = [
   },
 ]
 
+const isAllowed = (role: string, href?: string) => {
+  if (!href) return true
+  if (role === 'ADMIN') return true
+  if (role === 'SUPERVISOR') {
+    return ['/dashboard', '/projects', '/material-usage', '/warehouse', '/small-works'].includes(href)
+  }
+  if (role === 'ACCOUNTANT') {
+    return ['/dashboard', '/suppliers', '/projects', '/financials', '/purchases', '/employees', '/salaries', '/reports'].includes(href)
+  }
+  return false
+}
+
 export function Sidebar() {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
+  const { data: session } = useSession()
+  const role = (session?.user as any)?.role ?? 'ADMIN'
 
   return (
     <aside
@@ -119,6 +134,11 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
         {NAV_ITEMS.map((item, idx) => {
           if ((item as any).type === 'divider') {
+            // Find next item to verify if it is allowed
+            const nextItem = NAV_ITEMS.slice(idx + 1).find((i) => (i as any).href)
+            if (nextItem && !isAllowed(role, (nextItem as any).href)) {
+              return null
+            }
             if (collapsed) return <div key={idx} className="border-t border-surface-600 my-2" />
             return (
               <div key={idx} className="px-3 pt-4 pb-1">
@@ -130,6 +150,9 @@ export function Sidebar() {
           }
           const Icon = (item as any).icon
           const isActive = pathname === (item as any).href || pathname.startsWith((item as any).href + '/')
+          
+          if (!isAllowed(role, (item as any).href)) return null
+
           return (
             <Link key={(item as any).href} href={(item as any).href}>
               <span

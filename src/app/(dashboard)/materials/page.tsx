@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Package, Search } from 'lucide-react'
 import { UNITS } from '@/lib/utils'
+import { RoleGuard } from '@/components/role-guard'
 
 interface Category { id: string; name: string; nameTA: string | null }
 interface Material { id: string; name: string; nameTA: string | null; unit: string; categoryId: string; category: Category }
@@ -77,122 +78,124 @@ export default function MaterialsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Materials <span className="tamil text-slate-400 text-lg font-normal">பொருட்கள்</span></h1>
-          <p className="page-subtitle">{materials.length} materials in {categories.length} categories</p>
+    <RoleGuard allowedRoles={['ADMIN']}>
+      <div className="space-y-6">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Materials <span className="tamil text-slate-400 text-lg font-normal">பொருட்கள்</span></h1>
+            <p className="page-subtitle">{materials.length} materials in {categories.length} categories</p>
+          </div>
+          <button onClick={openAdd} className="btn-primary"><Plus className="w-4 h-4" /> Add Material</button>
         </div>
-        <button onClick={openAdd} className="btn-primary"><Plus className="w-4 h-4" /> Add Material</button>
-      </div>
 
-      {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input type="text" placeholder="Search materials..." value={search} onChange={(e) => setSearch(e.target.value)} className="input pl-10" />
+        {/* Filters */}
+        <div className="flex gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-48">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input type="text" placeholder="Search materials..." value={search} onChange={(e) => setSearch(e.target.value)} className="input pl-10" />
+          </div>
+          <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)} className="select w-auto min-w-48">
+            <option value="">All Categories / அனைத்தும்</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
         </div>
-        <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)} className="select w-auto min-w-48">
-          <option value="">All Categories / அனைத்தும்</option>
-          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
 
-      {/* By Category */}
-      {byCategory.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon"><Package className="w-8 h-8" /></div>
-          <h3 className="text-slate-300 font-medium mb-1">No materials found</h3>
-          <button onClick={openAdd} className="btn-primary mt-4"><Plus className="w-4 h-4" /> Add Material</button>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {byCategory.map((group, gIdx) => (
-            <div key={group.id} className="card">
-              <h2 className="section-title">
-                <span className={`px-2 py-1 rounded-lg text-xs font-bold ${CATEGORY_COLORS[gIdx % 4]}`}>
-                  {group.items.length}
-                </span>
-                {group.name}
-                {group.nameTA && <span className="tamil text-slate-400 font-normal text-sm">{group.nameTA}</span>}
-              </h2>
-              <div className="table-container">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Material Name / பொருள் பெயர்</th>
-                      <th>Tamil Name / தமிழ் பெயர்</th>
-                      <th>Unit</th>
-                      <th className="w-20">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.items.map((m) => (
-                      <tr key={m.id}>
-                        <td className="font-medium">{m.name}</td>
-                        <td className="tamil text-slate-400">{m.nameTA ?? '—'}</td>
-                        <td><span className="badge badge-blue">{m.unit}</span></td>
-                        <td>
-                          <div className="flex gap-1">
-                            <button onClick={() => openEdit(m)} className="p-1.5 rounded-lg text-slate-400 hover:text-brand-400 hover:bg-brand-600/10 transition-all">
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => handleDelete(m.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-600/10 transition-all">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
+        {/* By Category */}
+        {byCategory.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon"><Package className="w-8 h-8" /></div>
+            <h3 className="text-slate-300 font-medium mb-1">No materials found</h3>
+            <button onClick={openAdd} className="btn-primary mt-4"><Plus className="w-4 h-4" /> Add Material</button>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {byCategory.map((group, gIdx) => (
+              <div key={group.id} className="card">
+                <h2 className="section-title">
+                  <span className={`px-2 py-1 rounded-lg text-xs font-bold ${CATEGORY_COLORS[gIdx % 4]}`}>
+                    {group.items.length}
+                  </span>
+                  {group.name}
+                  {group.nameTA && <span className="tamil text-slate-400 font-normal text-sm">{group.nameTA}</span>}
+                </h2>
+                <div className="table-container">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Material Name / பொருள் பெயர்</th>
+                        <th>Tamil Name / தமிழ் பெயர்</th>
+                        <th>Unit</th>
+                        <th className="w-20">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Modal */}
-      {modalOpen && (
-        <div className="modal-overlay" onClick={() => setModalOpen(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="text-lg font-semibold text-slate-100">{editing ? 'Edit Material' : 'Add Material'}</h2>
-              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-slate-200 transition-colors text-xl">×</button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="modal-body">
-                <div>
-                  <label className="label">Category / வகை *</label>
-                  <select className="select" required value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
-                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                    </thead>
+                    <tbody>
+                      {group.items.map((m) => (
+                        <tr key={m.id}>
+                          <td className="font-medium">{m.name}</td>
+                          <td className="tamil text-slate-400">{m.nameTA ?? '—'}</td>
+                          <td><span className="badge badge-blue">{m.unit}</span></td>
+                          <td>
+                            <div className="flex gap-1">
+                              <button onClick={() => openEdit(m)} className="p-1.5 rounded-lg text-slate-400 hover:text-brand-400 hover:bg-brand-600/10 transition-all">
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => handleDelete(m.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-600/10 transition-all">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="form-grid">
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Modal */}
+        {modalOpen && (
+          <div className="modal-overlay" onClick={() => setModalOpen(false)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2 className="text-lg font-semibold text-slate-100">{editing ? 'Edit Material' : 'Add Material'}</h2>
+                <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-slate-200 transition-colors text-xl">×</button>
+              </div>
+              <form onSubmit={handleSubmit}>
+                <div className="modal-body">
                   <div>
-                    <label className="label">Material Name * / பொருள் பெயர்</label>
-                    <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Cement" />
-                  </div>
-                  <div>
-                    <label className="label tamil">தமிழ் பெயர் (Tamil Name)</label>
-                    <input className="input tamil" value={form.nameTA} onChange={(e) => setForm({ ...form, nameTA: e.target.value })} placeholder="சிமெண்ட்" />
-                  </div>
-                  <div>
-                    <label className="label">Unit / அளவு</label>
-                    <select className="select" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
-                      {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                    <label className="label">Category / வகை *</label>
+                    <select className="select" required value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
+                      {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
+                  <div className="form-grid">
+                    <div>
+                      <label className="label">Material Name * / பொருள் பெயர்</label>
+                      <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Cement" />
+                    </div>
+                    <div>
+                      <label className="label tamil">தமிழ் பெயர் (Tamil Name)</label>
+                      <input className="input tamil" value={form.nameTA} onChange={(e) => setForm({ ...form, nameTA: e.target.value })} placeholder="சிமெண்ட்" />
+                    </div>
+                    <div>
+                      <label className="label">Unit / அளவு</label>
+                      <select className="select" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
+                        {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" disabled={loading} className="btn-primary">{loading ? 'Saving...' : editing ? 'Update' : 'Add Material'}</button>
-              </div>
-            </form>
+                <div className="modal-footer">
+                  <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
+                  <button type="submit" disabled={loading} className="btn-primary">{loading ? 'Saving...' : editing ? 'Update' : 'Add Material'}</button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </RoleGuard>
   )
 }
