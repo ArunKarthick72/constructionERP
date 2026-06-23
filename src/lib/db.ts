@@ -1,9 +1,18 @@
 import { PrismaClient } from '@prisma/client'
+import fs from 'fs'
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient }
 
 const isVercel = process.env.VERCEL === '1'
-const dbUrl = isVercel ? 'file:/var/task/public/dev.db' : undefined
+let dbUrl: string | undefined = undefined
+
+if (isVercel) {
+  if (fs.existsSync('/var/task/public/dev.db')) {
+    dbUrl = 'file:/var/task/public/dev.db'
+  } else {
+    dbUrl = 'file:./public/dev.db'
+  }
+}
 
 export const prisma =
   globalForPrisma.prisma ??
@@ -13,3 +22,4 @@ export const prisma =
   })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
